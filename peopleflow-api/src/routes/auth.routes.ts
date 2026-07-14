@@ -115,4 +115,18 @@ router.get("/me", authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
+// Diagnostics route to test database connection
+router.get("/test-db", async (req: Request, res: Response) => {
+  try {
+    const count = await prisma.employee.count();
+    res.json({ status: "success", count });
+  } catch (err: any) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+      stack: err.stack
+    });
+  }
+});
+
 export default router;
