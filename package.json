@@ -1,0 +1,11 @@
+{
+  "name": "peopleflow-root",
+  "version": "1.0.0",
+  "description": "PeopleFlow - AI-Powered HR Operations Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix peopleflow-api && npm install --prefix peopleflow-web",
+    "dev:api": "npm run dev --prefix peopleflow-api",
+    "dev:web": "npm run dev --prefix peopleflow-web"
+  }
+}

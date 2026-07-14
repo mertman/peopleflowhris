@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f5f7ff;
+  --color-primary-100: #ebf0fe;
+  --color-primary-200: #dae3fc;
+  --color-primary-300: #bdcdfa;
+  --color-primary-400: #94acf5;
+  --color-primary-500: #6382f0;
+  --color-primary-600: #3b5ce8;
+  --color-primary-700: #2544d6;
+  --color-primary-800: #1b32b3;
+  --color-primary-900: #15258f;
+  --color-primary-950: #0d165c;
+  
+  --font-sans: 'Inter', sans-serif;
+}
+
+@utility transition-all-custom {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+}
+
+/* Custom Scrollbar Styles for Webkit */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

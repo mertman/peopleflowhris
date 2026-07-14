@@ -1,0 +1,118 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  id             String        @id @default(uuid())
+  employeeNumber String        @unique
+  status         String        @default("Active") // Active, Terminated, Leave
+  role           String        @default("Employee") // Employee, Manager, HR, Administrator
+  passwordHash   String        // For login simulation
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  personalInfo   PersonalInfo?
+  jobInfo        JobInfo?
+  jobHistory     JobHistory[]
+  heldPosition   Position?     @relation("IncumbentRelation")
+}
+
+model PersonalInfo {
+  id            String    @id @default(uuid())
+  employeeId    String    @unique
+  firstName     String
+  lastName      String
+  preferredName String?
+  dateOfBirth   DateTime
+  gender        String
+  nationality   String
+  email         String    @unique
+  phone         String
+  
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model JobInfo {
+  id             String    @id @default(uuid())
+  employeeId     String    @unique
+  company        String
+  legalEntity    String
+  businessUnit   String
+  division       String
+  department     String
+  location       String
+  jobTitle       String
+  position       String
+  grade          String
+  payGrade       String
+  fte            Float     @default(1.0)
+  employeeClass  String    @default("Regular") // Regular, Contractor
+  managerId      String?
+  hireDate       DateTime
+  probationEnd   DateTime?
+  salary         Float     @default(0.0)
+
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model JobHistory {
+  id             String    @id @default(uuid())
+  employeeId     String
+  effectiveDate  DateTime
+  event          String    // Hire, Promote, Transfer, Terminate, Rehire, Salary Change
+  eventReason    String
+  company        String
+  legalEntity    String
+  businessUnit   String
+  division       String
+  department     String
+  location       String
+  jobTitle       String
+  position       String
+  grade          String
+  payGrade       String
+  fte            Float
+  employeeClass  String
+  managerId      String?
+  salary         Float     @default(0.0)
+  createdAt      DateTime  @default(now())
+
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model Position {
+  id           String    @id @default(uuid())
+  code         String    @unique // e.g. 100201
+  title        String
+  department   String
+  location     String
+  incumbentId  String?   @unique
+  
+  incumbent    Employee? @relation("IncumbentRelation", fields: [incumbentId], references: [id], onDelete: SetNull)
+}
+
+model WorkflowRequest {
+  id           String    @id @default(uuid())
+  employeeId   String
+  requesterId  String
+  type         String    // Promotion, Transfer, Salary Change, Terminate, Leave
+  details      String    // JSON string containing proposed new JobInfo/Employee values
+  status       String    // Pending Manager, Pending HR, Approved, Rejected
+  feedback     String?   // Rejection feedback
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AutomationLog {
+  id           String    @id @default(uuid())
+  workflowName String    // Onboarding, Promotion, Offboarding
+  event        String    // e.g. Webhook Dispatch, OpenAI Offer Letter, Slack Alert
+  status       String    // Success, Staged, Failed
+  details      String
+  timestamp    DateTime  @default(now())
+}
