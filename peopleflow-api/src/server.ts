@@ -41,6 +41,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ message: "Something went wrong on the server." });
 });
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), "0.0.0.0", () => {
   console.log(`[Server] PeopleFlow API is listening on port ${PORT}`);
 });
+
