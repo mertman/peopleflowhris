@@ -161,7 +161,7 @@ router.post("/register-google", async (req: Request, res: Response) => {
     }
   } catch (err: any) {
     console.error("[OAuth] Verification failed:", err);
-    res.status(400).json({ message: "Google account verification failed. Invalid token." });
+    res.status(400).json({ message: `Google account verification failed: ${err.message || "Invalid token."}` });
     return;
   }
 
