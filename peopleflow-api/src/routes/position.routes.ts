@@ -1,8 +1,7 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prismaClient";
 import { authenticateToken, requireRole } from "../middleware/auth.middleware";
 
-const prisma = new PrismaClient();
 const router = Router();
 
 // GET /api/positions - List all positions with incumbent link

@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import * as jwt from "jsonwebtoken";
 
+import { prismaStorage } from "../prismaClient";
+
 const JWT_SECRET = process.env.JWT_SECRET || "peopleflow-secret-key-123456";
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
@@ -13,9 +15,13 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
     (req as any).user = decoded;
-    next();
+    
+    // Wrap subsequent execution paths under this request's tenant sandbox ID
+    prismaStorage.run({ tenantId: decoded.tenantId || "default" }, () => {
+      next();
+    });
   } catch (error) {
     res.status(403).json({ message: "Invalid or expired token." });
   }

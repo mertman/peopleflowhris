@@ -184,7 +184,7 @@ const EmployeeProfile: React.FC<EmployeeProfileProps> = ({ learningMode, user })
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-4rem)]">
+    <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto max-h-[calc(100vh-4rem)]">
       {/* Back button */}
       <div>
         <Link to="/employees" className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-semibold uppercase tracking-wider transition-colors">

@@ -16,7 +16,8 @@ model Employee {
   passwordHash   String        // For login simulation
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  
+  tenantId       String        @default("default")
+
   personalInfo   PersonalInfo?
   jobInfo        JobInfo?
   jobHistory     JobHistory[]
@@ -93,7 +94,8 @@ model Position {
   department   String
   location     String
   incumbentId  String?   @unique
-  
+  tenantId     String    @default("default")
+
   incumbent    Employee? @relation("IncumbentRelation", fields: [incumbentId], references: [id], onDelete: SetNull)
 }
 
@@ -107,6 +109,7 @@ model WorkflowRequest {
   feedback     String?   // Rejection feedback
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  tenantId     String    @default("default")
 }
 
 model AutomationLog {
@@ -116,4 +119,5 @@ model AutomationLog {
   status       String    // Success, Staged, Failed
   details      String
   timestamp    DateTime  @default(now())
+  tenantId     String    @default("default")
 }

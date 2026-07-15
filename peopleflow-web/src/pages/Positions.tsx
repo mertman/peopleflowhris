@@ -83,7 +83,7 @@ const Positions: React.FC<PositionsProps> = ({ learningMode, user }) => {
   const canEdit = user?.role === "HR" || user?.role === "Administrator";
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-4rem)]">
+    <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto max-h-[calc(100vh-4rem)]">
       {/* Learning Mode Banner */}
       {learningMode && (
         <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-200 rounded-xl p-4 flex gap-4">

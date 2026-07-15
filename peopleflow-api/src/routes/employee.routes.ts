@@ -1,10 +1,9 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prismaClient";
 import { authenticateToken, requireRole } from "../middleware/auth.middleware";
 import * as bcrypt from "bcryptjs";
 import { logAutomationEvent } from "./automation.routes";
 
-const prisma = new PrismaClient();
 const router = Router();
 
 // GET /api/dashboard/stats

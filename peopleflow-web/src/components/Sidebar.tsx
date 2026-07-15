@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -8,26 +8,39 @@ import {
   Settings, 
   LogOut,
   CheckSquare,
-  Cpu
+  Cpu,
+  X,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  ShieldCheck,
+  Activity,
+  GitBranch,
+  Globe,
+  Database,
+  ListChecks
 } from "lucide-react";
 
 interface SidebarProps {
   user: any;
   onLogout: () => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen, setIsOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [adminExpanded, setAdminExpanded] = useState(() => location.pathname === "/admin");
 
   const menuItems: { name: string; path: string; icon: any; enabled: boolean; badge?: string }[] = [
     { name: "Dashboard", path: "/", icon: LayoutDashboard, enabled: true },
     { name: "Inbox / Approvals", path: "/inbox", icon: CheckSquare, enabled: true },
-    { name: "People", path: "/employees", icon: Users, enabled: true },
-    { name: "Org Chart", path: "/org-chart", icon: Network, enabled: true },
-    { name: "Positions", path: "/positions", icon: Briefcase, enabled: true },
-    { name: "n8n Automation", path: "/automation", icon: Cpu, enabled: true },
-    { name: "Settings", path: "#", icon: Settings, enabled: false }
+    { name: "Employee Central", path: "/employees", icon: Users, enabled: true },
+    { name: "Organization", path: "/org-chart", icon: Network, enabled: true },
+    { name: "Position Management", path: "/positions", icon: Briefcase, enabled: true },
+    { name: "Report Center", path: "/reports", icon: FileText, enabled: true },
+    { name: "Integration Center", path: "/integration-center", icon: Cpu, enabled: true }
   ];
 
   const handleLogoutClick = () => {
@@ -45,16 +58,29 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0">
+    <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col h-screen transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    }`}>
       {/* Brand logo */}
-      <div className="h-16 px-6 border-b border-slate-200 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-400 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-primary-200">
-          P
+      <div className="h-16 px-6 border-b border-slate-200 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-400 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-primary-200">
+            P
+          </div>
+          <div>
+            <span className="font-bold text-slate-800 text-lg tracking-tight">People</span>
+            <span className="font-semibold text-primary-600 text-lg tracking-tight">Flow</span>
+          </div>
         </div>
-        <div>
-          <span className="font-bold text-slate-800 text-lg tracking-tight">People</span>
-          <span className="font-semibold text-primary-600 text-lg tracking-tight">Flow</span>
-        </div>
+
+        {/* Mobile close button */}
+        <button 
+          onClick={() => setIsOpen(false)}
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg md:hidden transition-colors"
+          aria-label="Close sidebar"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* User Info Badge */}
@@ -82,26 +108,6 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
 
-          if (!item.enabled) {
-            return (
-              <div
-                key={item.name}
-                className="flex items-center justify-between px-3 py-2 text-slate-400 rounded-lg cursor-not-allowed text-sm group"
-                title={`${item.name} is coming in a future sprint!`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-5 h-5 text-slate-300" />
-                  <span>{item.name}</span>
-                </div>
-                {item.badge && (
-                  <span className="text-[10px] font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-            );
-          }
-
           return (
             <Link
               key={item.name}
@@ -119,6 +125,61 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
             </Link>
           );
         })}
+
+        {/* Collapsible Administration Header */}
+        <div>
+          <button
+            onClick={() => setAdminExpanded(!adminExpanded)}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-150 cursor-pointer ${
+              location.pathname === "/admin" ? "bg-slate-50/80 font-bold" : ""
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Settings className={`w-5 h-5 ${location.pathname === "/admin" ? "text-primary-600" : "text-slate-400"}`} />
+              <span>Administration</span>
+            </div>
+            {adminExpanded ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {/* Sub menu list of administration tabs */}
+          {adminExpanded && (
+            <div className="mt-1 ml-4 border-l border-slate-100 pl-2.5 space-y-1">
+              {[
+                { name: "Business Rules", tab: "rules", icon: GitBranch },
+                { name: "Objects (MDF)", tab: "mdf", icon: Database },
+                { name: "Picklists", tab: "picklists", icon: ListChecks },
+                { name: "Role-Based Permissions", tab: "rbp", icon: ShieldCheck },
+                { name: "Workflow Config", tab: "workflows", icon: GitBranch },
+                { name: "Feature Flags", tab: "flags", icon: Settings },
+                { name: "Audit logs", tab: "audit", icon: Activity },
+                { name: "System Settings", tab: "system", icon: Globe }
+              ].map(sub => {
+                const SubIcon = sub.icon;
+                const searchParams = new URLSearchParams(location.search);
+                const active = location.pathname === "/admin" && searchParams.get("tab") === sub.tab;
+                
+                return (
+                  <Link
+                    key={sub.tab}
+                    to={`/admin?tab=${sub.tab}`}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100 ${
+                      active
+                        ? "bg-primary-50/50 text-primary-700 font-semibold"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                    }`}
+                  >
+                    <SubIcon className={`w-3.5 h-3.5 ${active ? "text-primary-600" : "text-slate-400"}`} />
+                    <span>{sub.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Bottom Actions */}
