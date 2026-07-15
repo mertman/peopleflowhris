@@ -161,6 +161,16 @@ router.post("/register-google", async (req: Request, res: Response) => {
     }
   } catch (err: any) {
     console.error("[OAuth] Verification failed:", err);
+    try {
+      const parts = credential.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+        console.log(`[OAuth Debug] Token Audience (from Frontend): ${payload.aud}`);
+        console.log(`[OAuth Debug] Server Expected Audience (Render Dashboard): ${googleClientId}`);
+      }
+    } catch (e) {
+      console.error("[OAuth Debug] Failed to decode mismatch details:", e);
+    }
     res.status(400).json({ message: `Google account verification failed: ${err.message || "Invalid token."}` });
     return;
   }
