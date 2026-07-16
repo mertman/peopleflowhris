@@ -121,8 +121,8 @@ router.get("/me", authenticateToken, async (req: Request, res: Response) => {
 router.post("/register-google", async (req: Request, res: Response) => {
   const { credential, template } = req.body;
 
-  if (!credential || !template) {
-    res.status(400).json({ message: "Credential token and template are required." });
+  if (!credential) {
+    res.status(400).json({ message: "Credential token is required." });
     return;
   }
 
