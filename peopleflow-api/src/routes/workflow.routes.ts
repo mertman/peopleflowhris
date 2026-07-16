@@ -12,7 +12,7 @@ router.get("/pending", authenticateToken, async (req: Request, res: Response) =>
   try {
     let pendingWorkflows = [];
 
-    if (user.role === "Administrator" || user.role === "HR") {
+    if (user.role === "Administrator" || user.role === "HR" || user.role === "Superadmin") {
       // HR/Admin sees Pending HR requests AND Pending Manager requests if they are the direct manager of that employee
       const reports = await prisma.jobInfo.findMany({
         where: { managerId: user.id },
@@ -156,7 +156,7 @@ router.post("/:id/approve", authenticateToken, async (req: Request, res: Respons
     }
     if (wf.status === "Pending HR") {
       // Only HR Specialists or Administrators can approve this step
-      if (user.role !== "HR" && user.role !== "Administrator") {
+      if (user.role !== "HR" && user.role !== "Administrator" && user.role !== "Superadmin") {
         res.status(403).json({ message: "Only HR Specialists or Administrators can approve this final step." });
         return;
       }
@@ -280,11 +280,11 @@ router.post("/:id/reject", authenticateToken, async (req: Request, res: Response
     }
 
     // Check permissions
-    if (wf.status === "Pending Manager" && user.role !== "Manager" && user.role !== "Administrator" && user.role !== "HR") {
+    if (wf.status === "Pending Manager" && user.role !== "Manager" && user.role !== "Administrator" && user.role !== "HR" && user.role !== "Superadmin") {
       res.status(403).json({ message: "Only managers or HR can reject this step." });
       return;
     }
-    if (wf.status === "Pending HR" && user.role !== "HR" && user.role !== "Administrator") {
+    if (wf.status === "Pending HR" && user.role !== "HR" && user.role !== "Administrator" && user.role !== "Superadmin") {
       res.status(403).json({ message: "Only HR administrators can reject this step." });
       return;
     }

@@ -85,7 +85,7 @@ export const seedSandboxTemplate = async (
   const config = templates[normTemplate] || templates.smallbusiness;
 
   const passwordHash = bcrypt.hashSync("password123", 10);
-  const employeeCount = normTemplate === "global" ? 150 : 25;
+  const employeeCount = normTemplate === "global" ? 125 : 25;
 
   const names = adminName.split(" ");
   const adminFirstName = names[0] || "Admin";
@@ -94,11 +94,11 @@ export const seedSandboxTemplate = async (
   console.log(`[Seeder] Seeding tenant: ${tenantId} (${config.companyName}) with template: ${templateName}`);
 
   // 1. Create Root Admin Employee
-  const adminEmpNum = `PF-${Math.floor(10000 + Math.random() * 90000)}`;
+  const adminEmpNum = `PF-${tenantId.toUpperCase().replace(/[^A-Z0-9]/g, "")}-ADMIN`;
   const adminEmployee = await prisma.employee.create({
     data: {
       employeeNumber: adminEmpNum,
-      role: "Administrator",
+      role: "Superadmin",
       status: "Active",
       passwordHash,
       tenantId,
@@ -143,11 +143,12 @@ export const seedSandboxTemplate = async (
   const seededEmployeesData: any[] = [];
   
   // Create dynamic employee database
+  const tenantSuffix = tenantId.toLowerCase().replace(/[^a-z0-9]/g, "");
   for (let i = 0; i < employeeCount - 1; i++) {
     const fName = firstNames[(i + 3) % firstNames.length];
     const lName = lastNames[(i + 7) % lastNames.length];
-    const empEmail = `${fName.toLowerCase()}.${lName.toLowerCase()}@${config.companyName.toLowerCase().replace(/\s+/g, "")}.com`;
-    const empNum = `PF-${Math.floor(20000 + Math.random() * 80000)}`;
+    const empEmail = `${fName.toLowerCase()}.${lName.toLowerCase()}.${i}.${tenantSuffix}@${config.companyName.toLowerCase().replace(/\s+/g, "")}.com`;
+    const empNum = `PF-${tenantId.toUpperCase().replace(/[^A-Z0-9]/g, "")}-${20000 + i}`;
 
     const isDirector = i < Math.ceil(employeeCount * 0.15);
     const isManager = !isDirector && i < Math.ceil(employeeCount * 0.35);
@@ -248,7 +249,7 @@ export const seedSandboxTemplate = async (
   // 3. Seed Positions
   for (let idx = 0; idx < createdIds.length; idx++) {
     const incumbentId = idx % 3 === 0 ? undefined : createdIds[idx];
-    const code = `POS-${100000 + idx}`;
+    const code = `POS-${tenantId.toUpperCase().replace(/[^A-Z0-9]/g, "")}-${100000 + idx}`;
     const empJob = seededEmployeesData[idx - 1] || seededEmployeesData[0];
     
     await prisma.position.create({

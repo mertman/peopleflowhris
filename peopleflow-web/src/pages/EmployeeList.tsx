@@ -127,7 +127,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ learningMode, user }) => {
     }
   };
 
-  const canEdit = user?.role === "HR" || user?.role === "Administrator";
+  const canEdit = user?.role === "HR" || user?.role === "Administrator" || user?.role === "Superadmin";
 
   const getStatusBadge = (status: string) => {
     switch (status) {

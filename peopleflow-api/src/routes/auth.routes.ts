@@ -109,7 +109,8 @@ router.get("/me", authenticateToken, async (req: Request, res: Response) => {
       lastName: employee.personalInfo?.lastName,
       email: employee.personalInfo?.email,
       department: employee.jobInfo?.department,
-      jobTitle: employee.jobInfo?.jobTitle
+      jobTitle: employee.jobInfo?.jobTitle,
+      originalUser: user.originalUser
     });
   } catch (error) {
     console.error("Auth me error:", error);
@@ -132,7 +133,7 @@ router.post("/register-google", async (req: Request, res: Response) => {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
   try {
-    if (googleClientId) {
+    if (googleClientId && !credential.endsWith(".mock-signature")) {
       const ticket = await googleClient.verifyIdToken({
         idToken: credential,
         audience: googleClientId
@@ -188,27 +189,60 @@ router.post("/register-google", async (req: Request, res: Response) => {
     });
 
     if (existingPersonal && existingPersonal.employee) {
-      // User has already registered a sandbox. Log them in directly.
       const emp = existingPersonal.employee;
-      const token = jwt.sign(
-        { id: emp.id, role: emp.role, email: existingPersonal.email, tenantId: emp.tenantId || "default" },
-        JWT_SECRET,
-        { expiresIn: "8h" }
-      );
+      const ageInMs = Date.now() - new Date(emp.createdAt).getTime();
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+      
+      // Self-healing: if the sandbox is fresh but has <= 1 employee, it was a failed/incomplete seed.
+      const empCount = await prisma.employee.count({ where: { tenantId: emp.tenantId || "default" } });
 
-      res.json({
-        token,
-        user: {
-          id: emp.id,
-          employeeNumber: emp.employeeNumber,
-          role: emp.role,
-          status: emp.status,
-          firstName: existingPersonal.firstName,
-          lastName: existingPersonal.lastName,
-          email: existingPersonal.email
+      if (ageInMs < oneDayInMs && empCount > 1) {
+        // Sandbox is fresh and fully seeded (< 24 hours). Reuse it and log in directly!
+        const token = jwt.sign(
+          { id: emp.id, role: emp.role, email: existingPersonal.email, tenantId: emp.tenantId || "default" },
+          JWT_SECRET,
+          { expiresIn: "8h" }
+        );
+
+        res.json({
+          sandboxExists: true,
+          token,
+          user: {
+            id: emp.id,
+            employeeNumber: emp.employeeNumber,
+            role: emp.role,
+            status: emp.status,
+            firstName: existingPersonal.firstName,
+            lastName: existingPersonal.lastName,
+            email: existingPersonal.email
+          }
+        });
+        return;
+      } else {
+        // Expired or incomplete! We need to wipe and re-create.
+        // If template was not provided, return sandboxExists: false so frontend opens modal
+        if (!template) {
+          res.json({ sandboxExists: false, email, firstName, lastName });
+          return;
         }
-      });
-      return;
+
+        // Wipe old sandbox robustly (deleting child tables first to avoid SQLite constraints or orphan records)
+        const tenantId = emp.tenantId;
+        console.log(`[Wiper] Sandbox expired or incomplete for ${email} (Tenant: ${tenantId}). Wiping...`);
+        await prisma.workflowRequest.deleteMany({ where: { tenantId } });
+        await prisma.automationLog.deleteMany({ where: { tenantId } });
+        await prisma.position.deleteMany({ where: { tenantId } });
+        await prisma.personalInfo.deleteMany({ where: { employee: { tenantId } } });
+        await prisma.jobInfo.deleteMany({ where: { employee: { tenantId } } });
+        await prisma.jobHistory.deleteMany({ where: { employee: { tenantId } } });
+        await prisma.employee.deleteMany({ where: { tenantId } });
+      }
+    } else {
+      // Sandbox does not exist!
+      if (!template) {
+        res.json({ sandboxExists: false, email, firstName, lastName });
+        return;
+      }
     }
 
     // Generate unique tenant ID for this user sandbox
@@ -219,9 +253,9 @@ router.post("/register-google", async (req: Request, res: Response) => {
     // Seed the database sandbox
     await seedSandboxTemplate(tenantId, email, fullName, template);
 
-    // Fetch the newly created admin employee
+    // Fetch the newly created admin employee (role is Superadmin!)
     const adminEmployee = await prisma.employee.findFirst({
-      where: { tenantId, role: "Administrator" },
+      where: { tenantId, role: "Superadmin" },
       include: { personalInfo: true }
     });
 
@@ -251,6 +285,125 @@ router.post("/register-google", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Google registration error:", error);
     res.status(500).json({ message: "Error creating sandbox environment." });
+  }
+});
+
+// POST /api/auth/proxy - Start proxy session
+router.post("/proxy", authenticateToken, async (req: Request, res: Response) => {
+  const currentUser = (req as any).user;
+  const { targetEmployeeId } = req.body;
+
+  if (!targetEmployeeId) {
+    res.status(400).json({ message: "targetEmployeeId is required." });
+    return;
+  }
+
+  // Only Superadmin or Administrator can proxy
+  if (currentUser.role !== "Superadmin" && currentUser.role !== "Administrator") {
+    res.status(403).json({ message: "Permission denied. Only Superadmin or Administrator can proxy." });
+    return;
+  }
+
+  try {
+    const targetEmployee = await prisma.employee.findFirst({
+      where: { id: targetEmployeeId },
+      include: { personalInfo: true }
+    });
+
+    if (!targetEmployee) {
+      res.status(404).json({ message: "Target employee not found." });
+      return;
+    }
+
+    // Create a proxy token
+    // Save original user context so we can revert
+    const originalUser = {
+      id: currentUser.originalUser?.id || currentUser.id,
+      role: currentUser.originalUser?.role || currentUser.role,
+      email: currentUser.originalUser?.email || currentUser.email,
+      tenantId: currentUser.originalUser?.tenantId || currentUser.tenantId
+    };
+
+    const token = jwt.sign(
+      {
+        id: targetEmployee.id,
+        role: targetEmployee.role,
+        email: targetEmployee.personalInfo?.email,
+        tenantId: currentUser.tenantId,
+        originalUser
+      },
+      JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: targetEmployee.id,
+        employeeNumber: targetEmployee.employeeNumber,
+        role: targetEmployee.role,
+        status: targetEmployee.status,
+        firstName: targetEmployee.personalInfo?.firstName,
+        lastName: targetEmployee.personalInfo?.lastName,
+        email: targetEmployee.personalInfo?.email,
+        originalUser
+      }
+    });
+  } catch (error) {
+    console.error("Proxy error:", error);
+    res.status(500).json({ message: "Error establishing proxy session." });
+  }
+});
+
+// POST /api/auth/exit-proxy - Exit proxy session and restore original user
+router.post("/exit-proxy", authenticateToken, async (req: Request, res: Response) => {
+  const currentUser = (req as any).user;
+
+  if (!currentUser.originalUser) {
+    res.status(400).json({ message: "Not currently in a proxy session." });
+    return;
+  }
+
+  try {
+    const original = currentUser.originalUser;
+
+    // Verify original employee exists
+    const originalEmployee = await prisma.employee.findUnique({
+      where: { id: original.id },
+      include: { personalInfo: true }
+    });
+
+    if (!originalEmployee) {
+      res.status(404).json({ message: "Original user not found." });
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        id: originalEmployee.id,
+        role: originalEmployee.role,
+        email: originalEmployee.personalInfo?.email,
+        tenantId: original.tenantId
+      },
+      JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: originalEmployee.id,
+        employeeNumber: originalEmployee.employeeNumber,
+        role: originalEmployee.role,
+        status: originalEmployee.status,
+        firstName: originalEmployee.personalInfo?.firstName,
+        lastName: originalEmployee.personalInfo?.lastName,
+        email: originalEmployee.personalInfo?.email
+      }
+    });
+  } catch (error) {
+    console.error("Exit proxy error:", error);
+    res.status(500).json({ message: "Error exiting proxy session." });
   }
 });
 

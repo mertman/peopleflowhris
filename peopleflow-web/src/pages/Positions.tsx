@@ -80,7 +80,7 @@ const Positions: React.FC<PositionsProps> = ({ learningMode, user }) => {
     );
   });
 
-  const canEdit = user?.role === "HR" || user?.role === "Administrator";
+  const canEdit = user?.role === "HR" || user?.role === "Administrator" || user?.role === "Superadmin";
 
   return (
     <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto max-h-[calc(100vh-4rem)]">

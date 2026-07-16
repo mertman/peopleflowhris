@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import api from "../utils/api";
 import { 
   LayoutDashboard, 
   Users, 
@@ -24,14 +25,52 @@ import {
 interface SidebarProps {
   user: any;
   onLogout: () => void;
+  onLoginSuccess: (token: string, user: any) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen, setIsOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onLoginSuccess, isOpen, setIsOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [adminExpanded, setAdminExpanded] = useState(() => location.pathname === "/admin");
+
+  const [proxyModalOpen, setProxyModalOpen] = useState(false);
+  const [searchEmployee, setSearchEmployee] = useState("");
+  const [employeesList, setEmployeesList] = useState<any[]>([]);
+  const [proxyLoading, setProxyLoading] = useState(false);
+
+  const openProxyModal = async () => {
+    setProxyModalOpen(true);
+    try {
+      const res = await api.get("/employees");
+      setEmployeesList(res.data);
+    } catch (err) {
+      console.error("Failed to load employees for proxy", err);
+    }
+  };
+
+  const handleStartProxy = async (targetId: string) => {
+    setProxyLoading(true);
+    try {
+      const res = await api.post("/auth/proxy", { targetEmployeeId: targetId });
+      setProxyModalOpen(false);
+      onLoginSuccess(res.data.token, res.data.user);
+    } catch (err) {
+      console.error("Failed to start proxy", err);
+    } finally {
+      setProxyLoading(false);
+    }
+  };
+
+  const handleExitProxy = async () => {
+    try {
+      const res = await api.post("/auth/exit-proxy");
+      onLoginSuccess(res.data.token, res.data.user);
+    } catch (err) {
+      console.error("Failed to exit proxy", err);
+    }
+  };
 
   const menuItems: { name: string; path: string; icon: any; enabled: boolean; badge?: string }[] = [
     { name: "Dashboard", path: "/", icon: LayoutDashboard, enabled: true },
@@ -50,6 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen, setIsOpen }) 
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
+      case "Superadmin": return "bg-purple-50 text-purple-700 border-purple-200";
       case "Administrator": return "bg-red-50 text-red-700 border-red-200";
       case "Manager": return "bg-amber-50 text-amber-700 border-amber-200";
       case "Employee": return "bg-green-50 text-green-700 border-green-200";
@@ -84,12 +124,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen, setIsOpen }) 
       </div>
 
       {/* User Info Badge */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+      <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center text-sm shadow-sm border border-primary-200 uppercase">
             {user?.firstName?.charAt(0) || "U"}{user?.lastName?.charAt(0) || ""}
           </div>
-          <div className="overflow-hidden">
+          <div className="overflow-hidden flex-1">
             <h4 className="font-semibold text-slate-800 text-sm truncate">
               {user?.firstName} {user?.lastName}
             </h4>
@@ -100,6 +140,25 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen, setIsOpen }) 
             </div>
           </div>
         </div>
+
+        {/* Proxy Actions */}
+        {user?.originalUser ? (
+          <button
+            onClick={handleExitProxy}
+            className="w-full text-center text-xs font-semibold py-1.5 px-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <span>Exit Proxy Session</span>
+          </button>
+        ) : (
+          (user?.role === "Superadmin" || user?.role === "Administrator") && (
+            <button
+              onClick={openProxyModal}
+              className="w-full text-center text-xs font-semibold py-1.5 px-3 bg-primary-50 hover:bg-primary-100 text-primary-700 border border-primary-200 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Proxy As...</span>
+            </button>
+          )
+        )}
       </div>
 
       {/* Navigation Items */}
@@ -192,6 +251,66 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen, setIsOpen }) 
           <span>Sign Out</span>
         </button>
       </div>
+
+      {/* Proxy Modal */}
+      {proxyModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm">Proxy As Another User</h3>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Act on behalf of another employee in the tenant</p>
+              </div>
+              <button onClick={() => setProxyModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search employee name or role..."
+                value={searchEmployee}
+                onChange={(e) => setSearchEmployee(e.target.value)}
+                className="w-full pl-3 pr-3 py-1.5 bg-slate-50 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder-slate-400 border border-slate-200 focus:border-primary-400 rounded-lg outline-none"
+              />
+            </div>
+
+            <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
+              {employeesList
+                .filter(emp => {
+                  const fullName = `${emp.personalInfo?.firstName || ""} ${emp.personalInfo?.lastName || ""}`.toLowerCase();
+                  const role = (emp.role || "").toLowerCase();
+                  const title = (emp.jobInfo?.jobTitle || "").toLowerCase();
+                  const term = searchEmployee.toLowerCase();
+                  return fullName.includes(term) || role.includes(term) || title.includes(term);
+                })
+                .map(emp => (
+                  <div key={emp.id} className="flex justify-between items-center p-2.5 hover:bg-slate-50 border border-slate-100 rounded-lg text-xs">
+                    <div className="overflow-hidden mr-2">
+                      <span className="font-bold text-slate-800 block truncate">
+                        {emp.personalInfo?.firstName} {emp.personalInfo?.lastName}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        {emp.jobInfo?.jobTitle || "No Title"} • {emp.role}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleStartProxy(emp.id)}
+                      disabled={proxyLoading}
+                      className="px-2.5 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded text-[10px] font-bold shadow transition-colors cursor-pointer shrink-0"
+                    >
+                      Proxy
+                    </button>
+                  </div>
+                ))}
+              {employeesList.length === 0 && (
+                <div className="text-center text-xs text-slate-400 py-4">Loading employee list...</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };

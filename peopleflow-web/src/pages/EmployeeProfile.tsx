@@ -155,7 +155,7 @@ const EmployeeProfile: React.FC<EmployeeProfileProps> = ({ learningMode, user })
     );
   }
 
-  const canEdit = user?.role === "HR" || user?.role === "Administrator";
+  const canEdit = user?.role === "HR" || user?.role === "Administrator" || user?.role === "Superadmin";
   const isSelf = user?.id === employee.id;
   const isManager = user?.role === "Manager";
 
@@ -247,7 +247,7 @@ const EmployeeProfile: React.FC<EmployeeProfileProps> = ({ learningMode, user })
                 Terminate Record
               </button>
             )}
-            {user?.role === "Administrator" && (
+            {(user?.role === "Administrator" || user?.role === "Superadmin") && (
               <button
                 onClick={handleHardDelete}
                 className="py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold text-xs transition-colors cursor-pointer"

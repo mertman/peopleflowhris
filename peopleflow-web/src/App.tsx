@@ -115,7 +115,7 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       {/* Navigation Sidebar */}
-      <Sidebar user={user} onLogout={handleLogout} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <Sidebar user={user} onLogout={handleLogout} onLoginSuccess={handleLoginSuccess} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       {/* Backdrop overlay for mobile sidebar */}
       {sidebarOpen && (

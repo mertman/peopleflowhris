@@ -13,7 +13,7 @@ router.get("/dashboard/stats", authenticateToken, async (req: Request, res: Resp
   try {
     let pendingApprovals = 0;
 
-    if (user.role === "Administrator" || user.role === "HR") {
+    if (user.role === "Administrator" || user.role === "HR" || user.role === "Superadmin") {
       pendingApprovals = await prisma.workflowRequest.count({
         where: {
           status: { in: ["Pending Manager", "Pending HR"] }

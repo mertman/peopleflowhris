@@ -30,7 +30,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 export const requireRole = (roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
-    if (!user || !roles.includes(user.role)) {
+    if (!user || (!roles.includes(user.role) && user.role !== "Superadmin")) {
       res.status(403).json({ message: "Permission denied. Insufficient privileges." });
       return;
     }

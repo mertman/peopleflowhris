@@ -56,21 +56,39 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleGoogleCredentialResponse = (response: any) => {
+  const handleGoogleCredentialResponse = async (response: any) => {
     try {
       const idToken = response.credential;
       const parts = idToken.split(".");
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+        setError("");
+        setLoading(true);
         setGoogleEmail(payload.email || "");
         setGoogleName(payload.name || "Google User");
         setGoogleCredential(idToken);
         setGoogleModalOpen(false);
-        setTemplateModalOpen(true);
+
+        // Call backend first to check if sandbox exists & is fresh
+        const res = await api.post("/auth/register-google", {
+          credential: idToken
+        });
+
+        if (res.data.sandboxExists) {
+          onLoginSuccess(res.data.token, res.data.user);
+        } else {
+          setTemplateModalOpen(true);
+        }
       }
-    } catch (err) {
-      console.error("Failed to parse Google credential token:", err);
-      setError("Failed to verify Google login token.");
+    } catch (err: any) {
+      console.error("Google credential handle failed:", err);
+      if (err.response?.data?.sandboxExists === false || err.response?.data?.message?.includes("template")) {
+        setTemplateModalOpen(true);
+      } else {
+        setError(err.response?.data?.message || "Google sandbox login failed.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,13 +104,33 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return `${header}.${payload}.mock-signature`;
   };
 
-  const handleGoogleAccountSelect = (selectedEmail: string, selectedName: string) => {
+  const handleGoogleAccountSelect = async (selectedEmail: string, selectedName: string) => {
     const mockToken = generateMockGoogleToken(selectedEmail, selectedName);
+    setError("");
+    setLoading(true);
     setGoogleEmail(selectedEmail);
     setGoogleName(selectedName);
     setGoogleCredential(mockToken);
     setGoogleModalOpen(false);
-    setTemplateModalOpen(true);
+
+    try {
+      const res = await api.post("/auth/register-google", {
+        credential: mockToken,
+        email: selectedEmail,
+        firstName: selectedName.split(" ")[0],
+        lastName: selectedName.split(" ").slice(1).join(" ")
+      });
+
+      if (res.data.sandboxExists) {
+        onLoginSuccess(res.data.token, res.data.user);
+      } else {
+        setTemplateModalOpen(true);
+      }
+    } catch (err: any) {
+      setTemplateModalOpen(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -350,7 +388,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-1">
               {[
-                { id: "global", label: "Global Enterprise", size: "150 employees", icon: Globe, color: "text-blue-600 bg-blue-50 border-blue-100", desc: "Corporate structure across USA, UK, Tokyo, Madrid." },
+                { id: "global", label: "Global Enterprise", size: "125 employees", icon: Globe, color: "text-blue-600 bg-blue-50 border-blue-100", desc: "Corporate structure across USA, UK, Tokyo, Madrid." },
                 { id: "tech", label: "Technology Company", size: "25 employees", icon: Cpu, color: "text-purple-600 bg-purple-50 border-purple-100", desc: "Product engineering, UI/UX designers, and QA roles." },
                 { id: "healthcare", label: "Healthcare Clinic", size: "25 employees", icon: HeartPulse, color: "text-rose-600 bg-rose-50 border-rose-100", desc: "Physicians, registered nurses, and clinic administrators." },
                 { id: "manufacturing", label: "Manufacturing Plant", size: "25 employees", icon: Hammer, color: "text-amber-600 bg-amber-50 border-amber-100", desc: "Plant operators, supervisors, and QC inspectors." },
