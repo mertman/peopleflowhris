@@ -41,7 +41,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ user }) => {
       {/* Floating Sticky Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 left-6 z-40 bg-indigo-600 hover:bg-indigo-700 text-white p-3.5 rounded-full shadow-xl flex items-center justify-center hover:scale-105 transition-all duration-200 border border-indigo-500/20 cursor-pointer active:scale-95 group animate-bounce"
+        className="fixed bottom-6 left-6 md:left-72 z-40 bg-indigo-600 hover:bg-indigo-700 text-white p-3.5 rounded-full shadow-xl flex items-center justify-center hover:scale-105 transition-all duration-200 border border-indigo-500/20 cursor-pointer active:scale-95 group animate-bounce"
         style={{ animationDuration: "3s" }}
         title="Share your feedback"
       >
