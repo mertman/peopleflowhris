@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import logoWide from "../assets/logo-wide.png";
 import { 
   LayoutDashboard, 
   Users, 
@@ -103,15 +104,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onLoginSuccess, isOpe
     }`}>
       {/* Brand logo */}
       <div className="h-16 px-6 border-b border-slate-200 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-primary-400 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-primary-200">
-            P
-          </div>
-          <div>
-            <span className="font-bold text-slate-800 text-lg tracking-tight">People</span>
-            <span className="font-semibold text-primary-600 text-lg tracking-tight">Flow</span>
-          </div>
-        </div>
+        <Link to="/" className="flex items-center">
+          <img src={logoWide} alt="PeopleFlow Logo" className="h-8 w-auto object-contain" />
+        </Link>
 
         {/* Mobile close button */}
         <button 

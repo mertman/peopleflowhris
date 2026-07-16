@@ -4,6 +4,7 @@ import {
   Globe, Building, HeartPulse, Hammer, Cpu, Hotel, ShoppingBag, X
 } from "lucide-react";
 import api from "../utils/api";
+import logoTall from "../assets/logo-tall.png";
 
 interface LoginProps {
   onLoginSuccess: (token: string, user: any) => void;
@@ -190,9 +191,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       {/* Main card */}
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl p-8 relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary-600 to-primary-400 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-primary-200 mb-3">
-            P
-          </div>
+          <img src={logoTall} alt="PeopleFlow Logo" className="h-16 w-auto mb-3 object-contain" />
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Welcome to PeopleFlow</h2>
           <p className="text-sm text-slate-500 mt-1">HRIS Inspired by SAP SuccessFactors EC</p>
         </div>
