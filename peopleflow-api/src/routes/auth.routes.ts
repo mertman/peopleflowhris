@@ -150,7 +150,8 @@ router.post("/register-google", async (req: Request, res: Response) => {
       // Unverified fallback decoding
       const parts = credential.split(".");
       if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
         email = payload.email || "";
         firstName = payload.given_name || "Admin";
         lastName = payload.family_name || "User";
@@ -165,7 +166,8 @@ router.post("/register-google", async (req: Request, res: Response) => {
     try {
       const parts = credential.split(".");
       if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
         console.log(`[OAuth Debug] Token Audience (from Frontend): ${payload.aud}`);
         console.log(`[OAuth Debug] Server Expected Audience (Render Dashboard): ${googleClientId}`);
       }
