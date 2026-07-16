@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { 
   Sparkles, Plus, Trash2, ArrowRight, X,
-  ShieldCheck, Users, Lock, Activity, Clock
+  ShieldCheck, Users, Lock, Activity, Clock, MessageSquare
 } from "lucide-react";
 import api from "../utils/api";
 
@@ -349,6 +349,28 @@ const AdminCenter: React.FC = () => {
   const [simulatorUser, setSimulatorUser] = useState("PF-00004"); // Default Elena Russo
   const [simulatorTarget, setSimulatorTarget] = useState("PF-00003"); // Default David Miller
   const [simulationResults, setSimulationResults] = useState<any>(null);
+
+  // Feedback Viewer states
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+
+  const loadFeedbacks = async () => {
+    setLoadingFeedbacks(true);
+    try {
+      const res = await api.get("/feedback");
+      setFeedbacks(res.data);
+    } catch (err) {
+      console.error("Failed to load feedbacks:", err);
+    } finally {
+      setLoadingFeedbacks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "feedback" && userObj?.role === "System Creator") {
+      loadFeedbacks();
+    }
+  }, [activeTab]);
 
   // Sync RBP States to Local Storage
   useEffect(() => {
@@ -2381,6 +2403,63 @@ const AdminCenter: React.FC = () => {
                 Reset Sandbox Data
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* TABS 9: USER FEEDBACKS (SYSTEM CREATOR ONLY) */}
+        {/* ---------------------------------------------------- */}
+        {activeTab === "feedback" && userObj?.role === "System Creator" && (
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-indigo-600 animate-pulse" />
+                  <span>User Feedbacks & Suggestions Console</span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5 font-semibold">Real-time compilation of feedback from learning sandbox users</p>
+              </div>
+              <button
+                onClick={loadFeedbacks}
+                className="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer"
+              >
+                Refresh List
+              </button>
+            </div>
+
+            {loadingFeedbacks ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                <span>Loading feedbacks...</span>
+              </div>
+            ) : feedbacks.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                <span>No user feedbacks submitted yet.</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {feedbacks.map((fb) => (
+                  <div key={fb.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/30 hover:bg-slate-50/80 transition-colors space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border-b border-slate-100 pb-2">
+                      <div>
+                        <span className="font-bold text-slate-800 text-xs">{fb.userName}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold ml-2">({fb.userEmail})</span>
+                      </div>
+                      <span className="text-[9px] text-slate-400 font-medium">
+                        {new Date(fb.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    
+                    <div className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">
+                      {fb.comment}
+                    </div>
+
+                    <div className="text-[10px] text-slate-400 bg-slate-100 border px-2 py-0.5 rounded font-mono w-fit truncate max-w-full">
+                      📍 Screen Location: {fb.pageUrl}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

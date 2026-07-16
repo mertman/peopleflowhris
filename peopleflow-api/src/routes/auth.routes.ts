@@ -184,6 +184,77 @@ router.post("/register-google", async (req: Request, res: Response) => {
   }
 
   try {
+    // Intercept System Creator user: meeranbreseeg@gmail.com
+    const isSystemCreator = email.toLowerCase() === "meeranbreseeg@gmail.com";
+    if (isSystemCreator) {
+      const creatorTenantId = "system-creator";
+      let creatorEmp = await prisma.employee.findFirst({
+        where: { tenantId: creatorTenantId, role: "System Creator" },
+        include: { personalInfo: true }
+      });
+
+      if (!creatorEmp) {
+        console.log(`[SystemCreator] Seeding permanent workspace for ${email}...`);
+        
+        // Clean up any old personal info to prevent email conflicts
+        const oldPersonal = await prisma.personalInfo.findUnique({
+          where: { email },
+          include: { employee: true }
+        });
+        if (oldPersonal && oldPersonal.employee) {
+          const oldTenantId = oldPersonal.employee.tenantId;
+          await prisma.workflowRequest.deleteMany({ where: { tenantId: oldTenantId } });
+          await prisma.automationLog.deleteMany({ where: { tenantId: oldTenantId } });
+          await prisma.position.deleteMany({ where: { tenantId: oldTenantId } });
+          await prisma.personalInfo.deleteMany({ where: { employee: { tenantId: oldTenantId } } });
+          await prisma.jobInfo.deleteMany({ where: { employee: { tenantId: oldTenantId } } });
+          await prisma.jobHistory.deleteMany({ where: { employee: { tenantId: oldTenantId } } });
+          await prisma.employee.deleteMany({ where: { tenantId: oldTenantId } });
+        }
+
+        // Seed fresh permanent workspace
+        await seedSandboxTemplate(creatorTenantId, email, `${firstName} ${lastName}`, "global");
+
+        // Locate and update their Superadmin role to System Creator
+        const newlySeededAdmin = await prisma.employee.findFirst({
+          where: { tenantId: creatorTenantId, role: "Superadmin" },
+          include: { personalInfo: true }
+        });
+        if (newlySeededAdmin) {
+          await prisma.employee.update({
+            where: { id: newlySeededAdmin.id },
+            data: { role: "System Creator" }
+          });
+          creatorEmp = await prisma.employee.findUnique({
+            where: { id: newlySeededAdmin.id },
+            include: { personalInfo: true }
+          });
+        }
+      }
+
+      if (creatorEmp && creatorEmp.personalInfo) {
+        const token = jwt.sign(
+          { id: creatorEmp.id, role: "System Creator", email: creatorEmp.personalInfo.email, tenantId: creatorTenantId },
+          JWT_SECRET,
+          { expiresIn: "8h" }
+        );
+        res.json({
+          sandboxExists: true,
+          token,
+          user: {
+            id: creatorEmp.id,
+            employeeNumber: creatorEmp.employeeNumber,
+            role: "System Creator",
+            status: creatorEmp.status,
+            firstName: creatorEmp.personalInfo.firstName,
+            lastName: creatorEmp.personalInfo.lastName,
+            email: creatorEmp.personalInfo.email
+          }
+        });
+        return;
+      }
+    }
+
     // Check if user already exists
     const existingPersonal = await prisma.personalInfo.findUnique({
       where: { email },
@@ -423,6 +494,9 @@ router.post("/reset-sandbox", authenticateToken, async (req: Request, res: Respo
   try {
     // Find the root admin user's details for this tenant
     const adminEmp = await prisma.employee.findFirst({
+      where: { tenantId, role: "System Creator" },
+      include: { personalInfo: true }
+    }) || await prisma.employee.findFirst({
       where: { tenantId, role: "Superadmin" },
       include: { personalInfo: true }
     }) || await prisma.employee.findFirst({
@@ -457,10 +531,21 @@ router.post("/reset-sandbox", authenticateToken, async (req: Request, res: Respo
     await seedSandboxTemplate(tenantId, email, fullName, template);
 
     // Fetch the newly created admin employee (now Superadmin!)
-    const freshAdmin = await prisma.employee.findFirst({
+    let freshAdmin = await prisma.employee.findFirst({
       where: { tenantId, role: "Superadmin" },
       include: { personalInfo: true }
     });
+
+    if (freshAdmin && tenantId === "system-creator") {
+      await prisma.employee.update({
+        where: { id: freshAdmin.id },
+        data: { role: "System Creator" }
+      });
+      freshAdmin = await prisma.employee.findUnique({
+        where: { id: freshAdmin.id },
+        include: { personalInfo: true }
+      });
+    }
 
     if (!freshAdmin) {
       res.status(500).json({ message: "Failed to locate fresh sandbox administrator." });

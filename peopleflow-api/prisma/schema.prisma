@@ -121,3 +121,12 @@ model AutomationLog {
   timestamp    DateTime  @default(now())
   tenantId     String    @default("default")
 }
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userName  String
+  userEmail String
+  pageUrl   String
+  comment   String
+  createdAt DateTime @default(now())
+}

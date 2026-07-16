@@ -20,7 +20,8 @@ import {
   GitBranch,
   Globe,
   Database,
-  ListChecks
+  ListChecks,
+  MessageSquare
 } from "lucide-react";
 
 interface SidebarProps {
@@ -90,6 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onLoginSuccess, isOpe
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
+      case "System Creator": return "bg-indigo-50 text-indigo-700 border-indigo-200 font-bold";
       case "Superadmin": return "bg-purple-50 text-purple-700 border-purple-200";
       case "Administrator": return "bg-red-50 text-red-700 border-red-200";
       case "Manager": return "bg-amber-50 text-amber-700 border-amber-200";
@@ -202,35 +204,41 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onLoginSuccess, isOpe
           {/* Sub menu list of administration tabs */}
           {adminExpanded && (
             <div className="mt-1 ml-4 border-l border-slate-100 pl-2.5 space-y-1">
-              {[
-                { name: "Business Rules", tab: "rules", icon: GitBranch },
-                { name: "Objects (MDF)", tab: "mdf", icon: Database },
-                { name: "Picklists", tab: "picklists", icon: ListChecks },
-                { name: "Role-Based Permissions", tab: "rbp", icon: ShieldCheck },
-                { name: "Workflow Config", tab: "workflows", icon: GitBranch },
-                { name: "Feature Flags", tab: "flags", icon: Settings },
-                { name: "Audit logs", tab: "audit", icon: Activity },
-                { name: "System Settings", tab: "system", icon: Globe }
-              ].map(sub => {
-                const SubIcon = sub.icon;
-                const searchParams = new URLSearchParams(location.search);
-                const active = location.pathname === "/admin" && searchParams.get("tab") === sub.tab;
-                
-                return (
-                  <Link
-                    key={sub.tab}
-                    to={`/admin?tab=${sub.tab}`}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100 ${
-                      active
-                        ? "bg-primary-50/50 text-primary-700 font-semibold"
-                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                    }`}
-                  >
-                    <SubIcon className={`w-3.5 h-3.5 ${active ? "text-primary-600" : "text-slate-400"}`} />
-                    <span>{sub.name}</span>
-                  </Link>
-                );
-              })}
+              {(() => {
+                const adminTabs = [
+                  { name: "Business Rules", tab: "rules", icon: GitBranch },
+                  { name: "Objects (MDF)", tab: "mdf", icon: Database },
+                  { name: "Picklists", tab: "picklists", icon: ListChecks },
+                  { name: "Role-Based Permissions", tab: "rbp", icon: ShieldCheck },
+                  { name: "Workflow Config", tab: "workflows", icon: GitBranch },
+                  { name: "Feature Flags", tab: "flags", icon: Settings },
+                  { name: "Audit logs", tab: "audit", icon: Activity },
+                  { name: "System Settings", tab: "system", icon: Globe }
+                ];
+                if (user?.role === "System Creator") {
+                  adminTabs.push({ name: "User Feedbacks", tab: "feedback", icon: MessageSquare });
+                }
+                return adminTabs.map(sub => {
+                  const SubIcon = sub.icon;
+                  const searchParams = new URLSearchParams(location.search);
+                  const active = location.pathname === "/admin" && searchParams.get("tab") === sub.tab;
+                  
+                  return (
+                    <Link
+                      key={sub.tab}
+                      to={`/admin?tab=${sub.tab}`}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100 ${
+                        active
+                          ? "bg-primary-50/50 text-primary-700 font-semibold"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                      }`}
+                    >
+                      <SubIcon className={`w-3.5 h-3.5 ${active ? "text-primary-600" : "text-slate-400"}`} />
+                      <span>{sub.name}</span>
+                    </Link>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>

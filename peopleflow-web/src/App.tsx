@@ -14,6 +14,7 @@ import ReportCenter from "./pages/ReportCenter";
 import AdminCenter from "./pages/AdminCenter";
 import api from "./utils/api";
 import PeopleFlowAI from "./components/PeopleFlowAI";
+import FeedbackWidget from "./components/FeedbackWidget";
 
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem("pf_token"));
@@ -150,6 +151,7 @@ const App: React.FC = () => {
           </Routes>
         </main>
         {featureFlags.aiEnabled !== false && <PeopleFlowAI />}
+        {user && <FeedbackWidget user={user} />}
       </div>
     </div>
   );

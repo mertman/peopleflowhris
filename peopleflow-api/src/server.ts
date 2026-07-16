@@ -7,6 +7,7 @@ import orgRoutes from "./routes/org.routes";
 import positionRoutes from "./routes/position.routes";
 import workflowRoutes from "./routes/workflow.routes";
 import automationRoutes from "./routes/automation.routes";
+import feedbackRoutes from "./routes/feedback.routes";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use("/api/org", orgRoutes);
 app.use("/api/positions", positionRoutes);
 app.use("/api/workflows", workflowRoutes);
 app.use("/api/automation", automationRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Health Check
 app.get("/health", (req, res) => {
