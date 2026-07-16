@@ -190,10 +190,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       {/* Main card */}
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl p-8 relative z-10">
-        <div className="flex flex-col items-center mb-8">
-          <img src={logoWide} alt="PeopleFlow Logo" className="h-10 w-auto mb-4 object-contain" />
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Welcome to PeopleFlow</h2>
-          <p className="text-sm text-slate-500 mt-1">HRIS Inspired by SAP SuccessFactors EC</p>
+        <div className="flex flex-col items-center mb-8 text-center">
+          <img src={logoWide} alt="PeopleFlow Logo" className="h-10 w-auto mb-5 object-contain" />
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight leading-snug max-w-sm">
+            A Hands-On Learning Sandbox Inspired by SAP SuccessFactors Employee Central
+          </h2>
+          <p className="text-xs text-slate-500 mt-3 font-medium max-w-xs leading-relaxed">
+            Practice Employee Central, Role-Based Permissions, Business Rules, MDF Objects, Workflows, and more.
+          </p>
         </div>
 
         {error && (
