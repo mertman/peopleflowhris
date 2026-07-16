@@ -409,6 +409,90 @@ router.post("/exit-proxy", authenticateToken, async (req: Request, res: Response
   }
 });
 
+// POST /api/auth/reset-sandbox - Reset user sandbox to initial seed state
+router.post("/reset-sandbox", authenticateToken, async (req: Request, res: Response) => {
+  const currentUser = (req as any).user;
+  const tenantId = currentUser.tenantId || "default";
+
+  // Prevent resetting standard "default" tenant
+  if (tenantId === "default") {
+    res.status(400).json({ message: "Cannot reset default sandbox." });
+    return;
+  }
+
+  try {
+    // Find the root admin user's details for this tenant
+    const adminEmp = await prisma.employee.findFirst({
+      where: { tenantId, role: "Superadmin" },
+      include: { personalInfo: true }
+    }) || await prisma.employee.findFirst({
+      where: { tenantId, role: "Administrator" },
+      include: { personalInfo: true }
+    });
+
+    if (!adminEmp || !adminEmp.personalInfo) {
+      res.status(404).json({ message: "Sandbox administrator details not found." });
+      return;
+    }
+
+    const email = adminEmp.personalInfo.email;
+    const fullName = `${adminEmp.personalInfo.firstName} ${adminEmp.personalInfo.lastName}`;
+
+    // Determine current template by counting employees before wiping
+    const empCount = await prisma.employee.count({ where: { tenantId } });
+    const template = empCount > 50 ? "global" : "smallbusiness";
+
+    console.log(`[Wiper] Sandbox reset requested by ${email} (Tenant: ${tenantId}, Template: ${template}). Wiping...`);
+
+    // Delete in correct order to respect constraints
+    await prisma.workflowRequest.deleteMany({ where: { tenantId } });
+    await prisma.automationLog.deleteMany({ where: { tenantId } });
+    await prisma.position.deleteMany({ where: { tenantId } });
+    await prisma.personalInfo.deleteMany({ where: { employee: { tenantId } } });
+    await prisma.jobInfo.deleteMany({ where: { employee: { tenantId } } });
+    await prisma.jobHistory.deleteMany({ where: { employee: { tenantId } } });
+    await prisma.employee.deleteMany({ where: { tenantId } });
+
+    // Seed a fresh sandbox template
+    await seedSandboxTemplate(tenantId, email, fullName, template);
+
+    // Fetch the newly created admin employee (now Superadmin!)
+    const freshAdmin = await prisma.employee.findFirst({
+      where: { tenantId, role: "Superadmin" },
+      include: { personalInfo: true }
+    });
+
+    if (!freshAdmin) {
+      res.status(500).json({ message: "Failed to locate fresh sandbox administrator." });
+      return;
+    }
+
+    // Issue a fresh token for the newly created Superadmin
+    const token = jwt.sign(
+      { id: freshAdmin.id, role: freshAdmin.role, email: freshAdmin.personalInfo?.email, tenantId },
+      JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      message: "Sandbox successfully reset.",
+      token,
+      user: {
+        id: freshAdmin.id,
+        employeeNumber: freshAdmin.employeeNumber,
+        role: freshAdmin.role,
+        status: freshAdmin.status,
+        firstName: freshAdmin.personalInfo?.firstName,
+        lastName: freshAdmin.personalInfo?.lastName,
+        email: freshAdmin.personalInfo?.email
+      }
+    });
+  } catch (error: any) {
+    console.error("Sandbox reset error:", error);
+    res.status(500).json({ message: `Error resetting sandbox: ${error.message}` });
+  }
+});
+
 // Diagnostics route to test database connection
 router.get("/test-db", async (req: Request, res: Response) => {
   try {

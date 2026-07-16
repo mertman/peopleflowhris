@@ -571,6 +571,42 @@ const AdminCenter: React.FC = () => {
     alert("System Settings saved successfully!");
   };
 
+  // Reset Sandbox action
+  const handleResetSandbox = async () => {
+    const confirmReset = confirm(
+      "⚠️ WARNING: Are you sure you want to reset your sandbox?\n\nThis will permanently delete all your changes, custom business rules, MDF objects, permission assignments, and employee updates. Your sandbox will be re-seeded to a clean starting state."
+    );
+
+    if (!confirmReset) return;
+
+    try {
+      const res = await api.post("/auth/reset-sandbox");
+      
+      // Clear localStorage data for this user sandbox
+      localStorage.removeItem(rulesKey);
+      localStorage.removeItem(mdfKey);
+      localStorage.removeItem(picklistsKey);
+      localStorage.removeItem(auditKey);
+      localStorage.removeItem(workflowsKey);
+      localStorage.removeItem(flagsKey);
+      localStorage.removeItem(settingsKey);
+      localStorage.removeItem(rolesKey);
+      localStorage.removeItem(groupsKey);
+      localStorage.removeItem(assignmentsKey);
+
+      alert("Sandbox successfully reset!");
+
+      // Update session context on client side and reload to apply
+      localStorage.setItem("pf_token", res.data.token);
+      localStorage.setItem("pf_user", JSON.stringify(res.data.user));
+
+      window.location.href = "/";
+    } catch (err: any) {
+      console.error("Failed to reset sandbox:", err);
+      alert(err.response?.data?.message || "Failed to reset sandbox. Please try again.");
+    }
+  };
+
   // 6. Workflow configurations additions
   const handleCreateWorkflow = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2331,6 +2367,20 @@ const AdminCenter: React.FC = () => {
                 </button>
               </div>
             </form>
+
+            <div className="border-t border-slate-100 pt-6 mt-6 space-y-4">
+              <div>
+                <h5 className="font-bold text-xs text-rose-600">Danger Zone</h5>
+                <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Wipe all your custom data and restore the initial template seed.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetSandbox}
+                className="py-2 px-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                Reset Sandbox Data
+              </button>
+            </div>
           </div>
         )}
 
