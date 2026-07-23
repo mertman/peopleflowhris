@@ -142,6 +142,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setTemplateModalOpen(true);
   };
 
+  const formatErrorMessage = (err: any, fallback: string) => {
+    if (err.response?.data?.message) return err.response.data.message;
+    if (err.message === "Network Error") {
+      return `Network Error: Unable to reach backend API (${api.defaults.baseURL}). Check your server connection.`;
+    }
+    if (err.message) return `${fallback} (${err.message})`;
+    return fallback;
+  };
+
   const handleInstantDemo = async () => {
     const guestEmail = `demo.guest.${Math.floor(1000 + Math.random() * 9000)}@peopleflow.demo`;
     const guestName = "Demo Guest Admin";
@@ -159,7 +168,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       });
       onLoginSuccess(res.data.token, res.data.user);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to initialize demo sandbox environment.");
+      console.error("Instant demo error:", err);
+      setError(formatErrorMessage(err, "Failed to initialize demo sandbox environment."));
     } finally {
       setLoading(false);
     }
@@ -187,7 +197,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       onLoginSuccess(res.data.token, res.data.user);
     } catch (err: any) {
       console.error("Demo registration error:", err);
-      setError(err.response?.data?.message || "Failed to register demo sandbox. Try again.");
+      setError(formatErrorMessage(err, "Failed to register demo sandbox. Try again."));
     } finally {
       setLoading(false);
     }
