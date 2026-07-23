@@ -119,11 +119,24 @@ router.get("/me", authenticateToken, async (req: Request, res: Response) => {
 });
 
 router.post("/register-google", async (req: Request, res: Response) => {
-  const { credential, template } = req.body;
+  let { credential, template } = req.body;
 
   if (!credential) {
-    res.status(400).json({ message: "Credential token is required." });
-    return;
+    if (req.body.isDemo || req.body.email || template) {
+      const demoEmail = req.body.email || `demo.guest.${Math.floor(1000 + Math.random() * 9000)}@peopleflow.demo`;
+      const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64");
+      const payload = Buffer.from(JSON.stringify({
+        email: demoEmail,
+        name: `${req.body.firstName || "Demo"} ${req.body.lastName || "Guest Admin"}`,
+        given_name: req.body.firstName || "Demo",
+        family_name: req.body.lastName || "Guest Admin",
+        sub: `mock-google-id-${Date.now()}`
+      })).toString("base64");
+      credential = `${header}.${payload}.mock-signature`;
+    } else {
+      res.status(400).json({ message: "Credential token is required." });
+      return;
+    }
   }
 
   let email = "";
@@ -133,7 +146,7 @@ router.post("/register-google", async (req: Request, res: Response) => {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
   try {
-    if (googleClientId && !credential.endsWith(".mock-signature")) {
+    if (googleClientId && !credential.endsWith(".mock-signature") && !credential.startsWith("demo-") && !req.body.isDemo) {
       const ticket = await googleClient.verifyIdToken({
         idToken: credential,
         audience: googleClientId
@@ -147,18 +160,24 @@ router.post("/register-google", async (req: Request, res: Response) => {
       firstName = payload.given_name || "Admin";
       lastName = payload.family_name || "User";
     } else {
-      // Unverified fallback decoding
+      // Unverified fallback decoding for mock / demo credentials
       const parts = credential.split(".");
       if (parts.length === 3) {
-        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-        const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
-        email = payload.email || "";
-        firstName = payload.given_name || "Admin";
-        lastName = payload.family_name || "User";
+        try {
+          const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+          const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
+          email = req.body.email || payload.email || "";
+          firstName = req.body.firstName || payload.given_name || "Admin";
+          lastName = req.body.lastName || payload.family_name || "User";
+        } catch (e) {
+          email = req.body.email || "demo-guest@peopleflow.demo";
+          firstName = req.body.firstName || "Demo";
+          lastName = req.body.lastName || "Guest";
+        }
       } else {
-        email = req.body.email || "test@gmail.com";
-        firstName = req.body.firstName || "Test";
-        lastName = req.body.lastName || "User";
+        email = req.body.email || "demo-guest@peopleflow.demo";
+        firstName = req.body.firstName || "Demo";
+        lastName = req.body.lastName || "Guest";
       }
     }
   } catch (err: any) {

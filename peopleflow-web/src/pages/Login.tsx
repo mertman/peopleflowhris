@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Globe, Building, HeartPulse, Hammer, Cpu, Hotel, ShoppingBag, X
+  Globe, Building, HeartPulse, Hammer, Cpu, Hotel, ShoppingBag, X, Sparkles, UserCheck, Zap
 } from "lucide-react";
 import api from "../utils/api";
 import logoWide from "../assets/logo-wide.png";
@@ -116,7 +116,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         credential: mockToken,
         email: selectedEmail,
         firstName: selectedName.split(" ")[0],
-        lastName: selectedName.split(" ").slice(1).join(" ")
+        lastName: selectedName.split(" ").slice(1).join(" "),
+        isDemo: true
       });
 
       if (res.data.sandboxExists) {
@@ -131,22 +132,62 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleLaunchDemoDirect = () => {
+    const guestEmail = `demo.guest.${Math.floor(1000 + Math.random() * 9000)}@peopleflow.demo`;
+    const guestName = "Demo Guest Admin";
+    const mockToken = generateMockGoogleToken(guestEmail, guestName);
+    setGoogleEmail(guestEmail);
+    setGoogleName(guestName);
+    setGoogleCredential(mockToken);
+    setTemplateModalOpen(true);
+  };
 
+  const handleInstantDemo = async () => {
+    const guestEmail = `demo.guest.${Math.floor(1000 + Math.random() * 9000)}@peopleflow.demo`;
+    const guestName = "Demo Guest Admin";
+    const mockToken = generateMockGoogleToken(guestEmail, guestName);
+    setError("");
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/register-google", {
+        credential: mockToken,
+        email: guestEmail,
+        firstName: "Demo",
+        lastName: "Guest Admin",
+        template: "global",
+        isDemo: true
+      });
+      onLoginSuccess(res.data.token, res.data.user);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to initialize demo sandbox environment.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRegisterGoogleSandbox = async (templateName: string) => {
     setError("");
     setLoading(true);
     setTemplateModalOpen(false);
 
+    const emailToUse = googleEmail || `demo.guest.${Math.floor(1000 + Math.random() * 9000)}@peopleflow.demo`;
+    const nameToUse = googleName || "Demo Guest Admin";
+    const credToUse = googleCredential || generateMockGoogleToken(emailToUse, nameToUse);
+
     try {
       const res = await api.post("/auth/register-google", {
-        credential: googleCredential,
-        template: templateName
+        credential: credToUse,
+        template: templateName,
+        email: emailToUse,
+        firstName: nameToUse.split(" ")[0] || "Demo",
+        lastName: nameToUse.split(" ").slice(1).join(" ") || "Admin",
+        isDemo: true
       });
 
       onLoginSuccess(res.data.token, res.data.user);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to register Google sandbox. Try again.");
+      console.error("Demo registration error:", err);
+      setError(err.response?.data?.message || "Failed to register demo sandbox. Try again.");
     } finally {
       setLoading(false);
     }
@@ -160,12 +201,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       {/* Main card */}
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-xl p-8 relative z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <img src={logoWide} alt="PeopleFlow Logo" className="h-10 w-auto mb-5 object-contain" />
+        <div className="flex flex-col items-center mb-6 text-center">
+          <img src={logoWide} alt="PeopleFlow Logo" className="h-10 w-auto mb-4 object-contain" />
           <h2 className="text-xl font-bold text-slate-800 tracking-tight leading-snug max-w-sm">
             A Hands-On Learning Sandbox Inspired by SAP SuccessFactors Employee Central
           </h2>
-          <p className="text-xs text-slate-500 mt-3 font-medium max-w-xs leading-relaxed">
+          <p className="text-xs text-slate-500 mt-2 font-medium max-w-xs leading-relaxed">
             Practice Employee Central, Role-Based Permissions, Business Rules, MDF Objects, Workflows, and more.
           </p>
         </div>
@@ -176,10 +217,60 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
+        {loading && (
+          <div className="mb-4 p-3 bg-primary-50 border border-primary-200 text-primary-700 text-xs rounded-xl font-semibold flex items-center justify-center gap-2 animate-pulse">
+            <Zap className="w-4 h-4 text-primary-600 animate-bounce" />
+            <span>Initializing demo HR sandbox & employee records...</span>
+          </div>
+        )}
+
         {/* Real Google Sign-in Script Container */}
-        <div className="mt-6 flex flex-col items-center justify-center space-y-3">
-          {loading && <span className="text-xs text-slate-400 font-semibold animate-pulse">Initializing sandbox environment...</span>}
+        <div className="mt-4 flex flex-col items-center justify-center space-y-3">
           <div id="google-signin-container" className="w-full flex justify-center min-h-[44px]"></div>
+        </div>
+
+        {/* OR Divider */}
+        <div className="relative my-5 flex items-center justify-center">
+          <div className="border-t border-slate-200 w-full" />
+          <span className="bg-white px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+            OR EXPLORE WITH DEMO DATA
+          </span>
+          <div className="border-t border-slate-200 w-full" />
+        </div>
+
+        {/* Demo Access Action Buttons */}
+        <div className="space-y-2.5 w-full">
+          <button
+            type="button"
+            onClick={handleInstantDemo}
+            disabled={loading}
+            className="w-full py-3 px-4 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300 group-hover:scale-110 transition-transform" />
+            <span>Try Live Demo (1-Click Instant Access)</span>
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleLaunchDemoDirect}
+              disabled={loading}
+              className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Building className="w-3.5 h-3.5 text-slate-500" />
+              <span>Choose Industry</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setGoogleModalOpen(true)}
+              disabled={loading}
+              className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+              <span>Sample Account</span>
+            </button>
+          </div>
         </div>
       </div>
 
