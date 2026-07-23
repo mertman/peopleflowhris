@@ -5,10 +5,10 @@ const getBaseURL = () => {
   if (envUrl && envUrl.trim().length > 0) {
     return envUrl.trim();
   }
-  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    return "/api";
+  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    return "http://localhost:5000/api";
   }
-  return "http://localhost:5000/api";
+  return "https://peopleflow-api-4vsk.onrender.com/api";
 };
 
 const api = axios.create({
